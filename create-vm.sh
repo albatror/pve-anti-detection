@@ -4,20 +4,19 @@ set -euo pipefail
 # === CONFIGURATION À PERSONNALISER ===
 VMID=200
 VMNAME="win11-anti-detect"
-STORAGE="local-lvm"
+STORAGE="local-lvm"           # For EFI and TPM only
 ISO_STORAGE="local"
 ISO_NAME="Win10_2004_French_x64.iso"
-CORES=8
+CORES=24
 SOCKETS=1
-RAM_MB=8192
-DISK_SIZE=60G
+RAM_MB=32192
 BRIDGE="vmbr0"
 TPM_STORAGE="local-lvm"
 
 # PCI IDs for passthrough (change according to your system)
 GPU_PCI="0000:01:00.0"      # GPU principal (RTX 4070 ex)
 GPU_AUDIO="0000:01:00.1"    # Audio GPU (habituellement)
-NVME_PCI="0000:02:00.0"     # Ton NVMe
+NVME_PCI="0000:02:00.0"     # Ton NVMe (vérifie avec lspci)
 
 # Génère une vraie MAC Intel (OUI officiel)
 if [ -z "${MAC_ADDR:-}" ]; then
@@ -67,7 +66,7 @@ SMBIOS3_ARGS="manufacturer=${CHASSIS_MANUFACTURER},type=${CHASSIS_TYPE},version=
 [ -n "$CHASSIS_ASSET" ] && SMBIOS3_ARGS+=",asset=${CHASSIS_ASSET}"
 [ -n "$CHASSIS_SKU" ] && SMBIOS3_ARGS+=",sku=${CHASSIS_SKU}"
 
-# === CRÉATION DE LA VM ===
+# === CRÉATION DE LA VM SANS DISQUE VIRTUEL ===
 echo "Creating VM $VMID ($VMNAME)..."
 qm create $VMID \
   --name "$VMNAME" \
@@ -81,8 +80,7 @@ qm create $VMID \
   --bios ovmf \
   --efidisk0 $STORAGE:0,format=qcow2,efitype=4m,pre-enrolled-keys=0 \
   --tpmstate0 $TPM_STORAGE:0,version=v2.0 \
-  --scsi0 $STORAGE:0,format=qcow2,size=$DISK_SIZE \
-  --boot order=scsi0;ide2;net0 \
+  --boot order=ide2;net0 \
   --cdrom $ISO_STORAGE:iso/$ISO_NAME \
   --vga std \
   --agent enabled=1
