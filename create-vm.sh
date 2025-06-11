@@ -3,7 +3,7 @@ set -euo pipefail
 
 # === CONFIGURATION À PERSONNALISER ===
 VMID=200
-VMNAME="win11-anti-detect"
+VMNAME="win10-20h1"
 STORAGE="local-lvm"           # For EFI and TPM only
 ISO_STORAGE="local"
 ISO_NAME="Win10_2004_French_x64.iso"
