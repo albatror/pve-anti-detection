@@ -14,9 +14,9 @@ BRIDGE="vmbr0"
 TPM_STORAGE="local-lvm"
 
 # PCI IDs for passthrough (change according to your system)
-GPU_PCI="0000:01:00.0"      # GPU principal (RTX 4070 ex)
-GPU_AUDIO="0000:01:00.1"    # Audio GPU (habituellement)
-NVME_PCI="0000:02:00.0"     # Ton NVMe (vérifie avec lspci)
+GPU_PCI="0000:01:00.0"
+GPU_AUDIO="0000:01:00.1"
+NVME_PCI="0000:02:00.0"
 
 # Génère une vraie MAC Intel (OUI officiel)
 if [ -z "${MAC_ADDR:-}" ]; then
@@ -74,8 +74,7 @@ qm create $VMID \
   --cores $CORES \
   --sockets $SOCKETS \
   --net0 virtio,bridge=$BRIDGE,macaddr=$MAC_ADDR \
-  --scsihw virtio-scsi-pci \
-  --ostype win11 \
+  --ostype win10 \
   --machine q35 \
   --bios ovmf \
   --efidisk0 $STORAGE:0,format=qcow2,efitype=4m,pre-enrolled-keys=0 \
@@ -85,17 +84,16 @@ qm create $VMID \
   --vga std \
   --agent enabled=1
 
-# === PASSTHROUGH GPU + NVMe ===
-echo "Adding GPU and NVMe passthrough..."
-qm set $VMID --hostpci0 "$GPU_PCI,pcie=1,rombar=0,multifunction=on"
-qm set $VMID --hostpci1 "$GPU_AUDIO,pcie=1"
-qm set $VMID --hostpci2 "$NVME_PCI,pcie=1"
-
-# === QEMU ARGS ANTI-DETECTION ===
+# === QEMU ARGS ANTI-DETECTION + README EXAMPLES ===
 echo "Applying advanced anti-detection QEMU arguments..."
 qm set $VMID \
   --cpu host,hidden=1,flags=+aes,+vmx \
-  --args "-device isa-debug-exit,iobase=0xf4,iosize=0x04 \
+  --args "-cpu host,hypervisor=off,vmware-cpuid-freq=false,enforce=false,host-phys-bits=true \
+    -smbios type=0 \
+    -smbios type=8 \
+    -smbios type=8 \
+    -smbios type=9 \
+    -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
     -machine vmport=off \
     -global kvm-pit.lost_tick_policy=discard \
     -no-hpet \
@@ -105,6 +103,12 @@ qm set $VMID \
     -overcommit mem-lock=off \
     -msg timestamp=on \
     -device ich9-intel-hda -device hda-output"
+
+# === PASSTHROUGH GPU + NVMe ===
+echo "Adding GPU and NVMe passthrough..."
+qm set $VMID --hostpci0 "$GPU_PCI,pcie=1,rombar=0,multifunction=on"
+qm set $VMID --hostpci1 "$GPU_AUDIO,pcie=1"
+qm set $VMID --hostpci2 "$NVME_PCI,pcie=1"
 
 # === SMBIOS HOST ALIGN (1, 2, 3) ===
 echo "Setting SMBIOS (host-aligned, serials random)..."
