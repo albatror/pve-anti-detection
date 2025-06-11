@@ -1,22 +1,17 @@
 #!/bin/bash
-# Automated installation script for PVE anti-detection packages
-# Follows the steps from README.en.MD
-
 set -euo pipefail
+
+GITHUB_REPO="https://github.com/lixiaoliu666/pve-anti-detection"
+GITHUB_API="https://api.github.com/repos/lixiaoliu666/pve-anti-detection/releases/latest"
 
 usage() {
     cat <<EOF
 Usage: $0 [<pve-qemu-kvm_deb> <pve-edk2-firmware_deb>]
        $0 --restore
 
-If no package arguments are provided, the script searches the current
-directory for the latest \*.deb files matching pve-qemu-kvm_*.deb and
-pve-edk2-firmware-ovmf_*.deb.
-If not found, downloads latest from https://github.com/lixiaoliu666/pve-anti-detection/releases
+Auto: Télécharge la version la plus récente ou recommandée du dépôt GitHub si les paquets ne sont pas trouvés localement.
 EOF
 }
-
-GITHUB_REPO="https://github.com/lixiaoliu666/pve-anti-detection"
 
 if [ "$EUID" -ne 0 ]; then
     echo "This script must be run as root." >&2
@@ -31,56 +26,56 @@ if [ "${1:-}" = "--restore" ]; then
     exit 0
 fi
 
-find_or_download_deb() {
-    local pattern="$1"
-    local filename
-    filename=$(ls -t $pattern 2>/dev/null | head -n1 || true)
-    if [ -z "$filename" ]; then
-        echo "Not found: $pattern. Trying to download from GitHub..."
-        # Get latest release download URL for .deb
-        url=$(curl -sL "${GITHUB_REPO}/releases/latest" \
-            | grep -oP "href=\K\"[^\"]*${pattern/.deb/}[^\"]+\.deb\"" \
-            | head -n1 | tr -d '"')
-        if [ -z "$url" ]; then
-            echo "Cannot find $pattern on GitHub releases." >&2
-            exit 1
-        fi
-        url="https://github.com${url}"
-        fname="${url##*/}"
-        echo "Downloading $fname from $url..."
-        curl -L -o "$fname" "$url"
-        filename="$fname"
-    fi
-    echo "$filename"
+get_latest_urls() {
+    # Récupère la liste des assets de la dernière release depuis l'API GitHub
+    curl -s "$GITHUB_API" | grep "browser_download_url" | cut -d '"' -f 4
 }
 
 if [ $# -eq 2 ]; then
     QEMU_DEB="$1"
     OVMF_DEB="$2"
 else
-    QEMU_DEB=$(find_or_download_deb "pve-qemu-kvm_*.deb")
-    OVMF_DEB=$(find_or_download_deb "pve-edk2-firmware-ovmf_*.deb")
-    echo "Using packages: $QEMU_DEB and $OVMF_DEB"
+    # Recherche locale
+    QEMU_DEB=$(ls -t pve-qemu-kvm_*.deb 2>/dev/null | head -n1 || true)
+    OVMF_DEB=$(ls -t pve-edk2-firmware-ovmf_*.deb 2>/dev/null | sort -Vr | head -n1 || true)
+
+    # Si absent, télécharge la dernière version
+    if [ -z "$QEMU_DEB" ] || [ -z "$OVMF_DEB" ]; then
+        echo "Paquets non trouvés localement. Téléchargement depuis GitHub..."
+        # Liste toutes les URLs
+        URLS=$(get_latest_urls)
+
+        # QEMU
+        QEMU_URL=$(echo "$URLS" | grep -E "pve-qemu-kvm_.*\.deb" | head -n1)
+        QEMU_DEB="${QEMU_URL##*/}"
+        [ -f "$QEMU_DEB" ] || curl -L -o "$QEMU_DEB" "$QEMU_URL"
+
+        # OVMF - Prend la version avec le numéro -x le plus élevé
+        OVMF_URL=$(echo "$URLS" | grep -E "pve-edk2-firmware-ovmf_4.*\.deb" | sort -Vr | head -n1)
+        OVMF_DEB="${OVMF_URL##*/}"
+        [ -f "$OVMF_DEB" ] || curl -L -o "$OVMF_DEB" "$OVMF_URL"
+
+        echo "Utilisation de : $QEMU_DEB et $OVMF_DEB"
+    fi
 fi
 
-# Display currently installed qemu package
-echo "Current pve-qemu-kvm version:"
+echo "Version courante pve-qemu-kvm :"
 dpkg -l | grep pve-qemu-kvm || true
 
-# Check whether we have version 9.x installed
+# Vérifie la version installée, upgrade si nécessaire
 installed_ver=$(dpkg-query -W -f='${Version}' pve-qemu-kvm 2>/dev/null || true)
 if ! echo "$installed_ver" | grep -q '^9\.'; then
-    echo "Updating system and installing latest pve-qemu-kvm..."
+    echo "Mise à jour du système et installation de pve-qemu-kvm si besoin..."
     apt update
     apt install -y pve-qemu-kvm
 fi
 
-# Install the anti-detection packages
-echo "Installing $QEMU_DEB and $OVMF_DEB..."
+# Installation
+echo "Installation de $QEMU_DEB et $OVMF_DEB..."
 dpkg -i "$QEMU_DEB"
 dpkg -i "$OVMF_DEB"
-apt-get -f install -y >/dev/null
+apt-get -f install -y
 
 cat <<MSG
-Installation finished. Please reboot the host to apply changes.
+✅ Installation terminée. Redémarrez l’hôte Proxmox pour appliquer les modifications.
 MSG
