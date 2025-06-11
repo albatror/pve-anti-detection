@@ -29,7 +29,7 @@ fi
 get_smbios_value() {
     local type="$1"
     local label="$2"
-    sudo dmidecode -t "$type" | grep "$label:" | head -n1 | cut -d: -f2- | sed 's/^[ \t]*//'
+    dmidecode -t "$type" | grep "$label:" | head -n1 | cut -d: -f2- | sed 's/^[ \t]*//'
 }
 
 # --- SMBIOS TYPE 1: SYSTEM ---
