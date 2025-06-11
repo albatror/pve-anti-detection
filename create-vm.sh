@@ -17,7 +17,7 @@ TPM_STORAGE="local-lvm"
 # PCI IDs for passthrough (change according to your system)
 GPU_PCI="0000:01:00.0"      # GPU principal (RTX 4070 ex)
 GPU_AUDIO="0000:01:00.1"    # Audio GPU (habituellement)
-NVME_PCI="0000:04:00.0"     # Ton NVMe
+NVME_PCI="0000:02:00.0"     # Ton NVMe
 
 # Génère une vraie MAC Intel (OUI officiel)
 if [ -z "${MAC_ADDR:-}" ]; then
