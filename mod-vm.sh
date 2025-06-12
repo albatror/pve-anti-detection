@@ -45,25 +45,12 @@ SYS_SERIAL=$(get_smbios_value 1 "Serial Number")
 SYS_SKU=$(get_smbios_value 1 "SKU Number")
 SYS_FAMILY=$(get_smbios_value 1 "Family")
 
-[[ -z "$SYS_MANUFACTURER" ]] && SYS_MANUFACTURER=$(random_manufacturer)
-[[ -z "$SYS_PRODUCT" ]]      && SYS_PRODUCT=$(random_product)
-[[ -z "$SYS_VERSION" ]]      && SYS_VERSION=$(random_version)
-[[ -z "$SYS_SERIAL" ]]       && SYS_SERIAL=$(random_serial)
-[[ -z "$SYS_SKU" ]]          && SYS_SKU=$(random_serial)
-[[ -z "$SYS_FAMILY" ]]       && SYS_FAMILY=$(random_family)
-
 # SMBIOS type 2 (baseboard)
 BASE_MANUFACTURER=$(get_smbios_value 2 "Manufacturer")
 BASE_PRODUCT=$(get_smbios_value 2 "Product Name")
 BASE_VERSION=$(get_smbios_value 2 "Version")
 BASE_SERIAL=$(get_smbios_value 2 "Serial Number")
 BASE_ASSET=$(get_smbios_value 2 "Asset Tag")
-
-[[ -z "$BASE_MANUFACTURER" ]] && BASE_MANUFACTURER=$(random_manufacturer)
-[[ -z "$BASE_PRODUCT" ]]      && BASE_PRODUCT=$(random_product)
-[[ -z "$BASE_VERSION" ]]      && BASE_VERSION=$(random_version)
-[[ -z "$BASE_SERIAL" ]]       && BASE_SERIAL=$(random_serial)
-[[ -z "$BASE_ASSET" ]]        && BASE_ASSET=$(random_serial)
 
 # SMBIOS type 3 (chassis)
 CHASSIS_MANUFACTURER=$(get_smbios_value 3 "Manufacturer")
@@ -73,12 +60,30 @@ CHASSIS_SERIAL=$(get_smbios_value 3 "Serial Number")
 CHASSIS_ASSET=$(get_smbios_value 3 "Asset Tag")
 CHASSIS_SKU=$(get_smbios_value 3 "SKU Number")
 
-[[ -z "$CHASSIS_MANUFACTURER" ]] && CHASSIS_MANUFACTURER=$(random_manufacturer)
-[[ -z "$CHASSIS_TYPE" ]]         && CHASSIS_TYPE=$(random_type)
-[[ -z "$CHASSIS_VERSION" ]]      && CHASSIS_VERSION=$(random_version)
-[[ -z "$CHASSIS_SERIAL" ]]       && CHASSIS_SERIAL=$(random_serial)
-[[ -z "$CHASSIS_ASSET" ]]        && CHASSIS_ASSET=$(random_serial)
-[[ -z "$CHASSIS_SKU" ]]          && CHASSIS_SKU=$(random_serial)
+# Remplace vides OU "Default string" par une valeur plausible
+is_default_or_empty() {
+    [[ -z "$1" || "$1" == "Default string" ]]
+}
+
+is_default_or_empty "$SYS_MANUFACTURER" && SYS_MANUFACTURER=$(random_manufacturer)
+is_default_or_empty "$SYS_PRODUCT"      && SYS_PRODUCT=$(random_product)
+is_default_or_empty "$SYS_VERSION"      && SYS_VERSION=$(random_version)
+is_default_or_empty "$SYS_SERIAL"       && SYS_SERIAL=$(random_serial)
+is_default_or_empty "$SYS_SKU"          && SYS_SKU=$(random_serial)
+is_default_or_empty "$SYS_FAMILY"       && SYS_FAMILY=$(random_family)
+
+is_default_or_empty "$BASE_MANUFACTURER" && BASE_MANUFACTURER=$(random_manufacturer)
+is_default_or_empty "$BASE_PRODUCT"      && BASE_PRODUCT=$(random_product)
+is_default_or_empty "$BASE_VERSION"      && BASE_VERSION=$(random_version)
+is_default_or_empty "$BASE_SERIAL"       && BASE_SERIAL=$(random_serial)
+is_default_or_empty "$BASE_ASSET"        && BASE_ASSET=$(random_serial)
+
+is_default_or_empty "$CHASSIS_MANUFACTURER" && CHASSIS_MANUFACTURER=$(random_manufacturer)
+is_default_or_empty "$CHASSIS_TYPE"         && CHASSIS_TYPE=$(random_type)
+is_default_or_empty "$CHASSIS_VERSION"      && CHASSIS_VERSION=$(random_version)
+is_default_or_empty "$CHASSIS_SERIAL"       && CHASSIS_SERIAL=$(random_serial)
+is_default_or_empty "$CHASSIS_ASSET"        && CHASSIS_ASSET=$(random_serial)
+is_default_or_empty "$CHASSIS_SKU"          && CHASSIS_SKU=$(random_serial)
 
 # Prévisualisation
 cat <<EOF | tee "$PREVIEW_FILE"
