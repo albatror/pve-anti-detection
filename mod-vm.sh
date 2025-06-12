@@ -12,22 +12,34 @@ NVME_PCI="0000:02:00.0"
 
 PREVIEW_FILE="vm${VMID}-preview.txt"
 
-get_smbios_value() {
-    local type="$1"
-    local label="$2"
-    dmidecode -t "$type" | grep "$label:" | head -n1 | cut -d: -f2- | sed 's/^[ \t]*//'
-}
-
-SYS_UUID=$(uuidgen)
-SMBIOS1_ARGS="uuid=${SYS_UUID}"
-
-QEMU_ARGS="-cpu host,hypervisor=off,vmware-cpuid-freq=false,enforce=false,host-phys-bits=true -smbios type=0 -smbios type=9 -smbios type=8 -smbios type=8"
-
-# === ATTENTION ===
-# Remplace le chemin disque/efidisk/sata par le tien si besoin (ici, vm-100-disk-0 et vm-100-disk-1 sur local-lvm)
+# Chemins disques à adapter à ton infra !
 EFIDISK_PATH="local-lvm:vm-${VMID}-disk-0,efitype=4m,size=528K"
 SATA0_PATH="local-lvm:vm-${VMID}-disk-1,size=128G,ssd=1"
 ISO_PATH="local:iso/Win10_2004_French_x64.iso"
+
+# Recherche UUID existant dans la config Proxmox
+VM_CONF_PATH="/etc/pve/qemu-server/${VMID}.conf"
+if [[ -f "$VM_CONF_PATH" ]]; then
+    EXISTING_UUID=$(grep '^smbios1:' "$VM_CONF_PATH" | grep -o 'uuid=[^, ]*' | cut -d= -f2)
+else
+    EXISTING_UUID=""
+fi
+
+# Génération UUID POSIX only si besoin
+if [[ -z "$EXISTING_UUID" ]]; then
+    if [[ -r /proc/sys/kernel/random/uuid ]]; then
+        SMBIOS_UUID=$(cat /proc/sys/kernel/random/uuid)
+    else
+        # fallback très simple (timestamp+PID+RANDOM, pas aussi universel, mais évite toute dépendance)
+        SMBIOS_UUID="$(date +%s)-$$-$RANDOM"
+    fi
+else
+    SMBIOS_UUID="$EXISTING_UUID"
+fi
+
+SMBIOS1_ARGS="uuid=${SMBIOS_UUID}"
+
+QEMU_ARGS="-cpu host,hypervisor=off,vmware-cpuid-freq=false,enforce=false,host-phys-bits=true -smbios type=0 -smbios type=9 -smbios type=8 -smbios type=8"
 
 cat <<EOF | tee "$PREVIEW_FILE"
 ====== Prévisualisation modification VM $VMID (style README adapté) ======
