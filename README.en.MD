@@ -1,8 +1,12 @@
+Language [<a href="README.md">中文</a>] | [<a href="README.en.MD">English</a>] Thanks for https://github.com/mk990 translate.
+
+PVE Debain Ubuntu ArchLinux virtual machine emulates a physical machine to avoid(or anti) detection
+
 # Li Xiaoliu & DadaShuai666 Project
 
 **Authors:** Li Xiaoliu & DadaShuai666
 
-Chat QQ Groups `25438194` with entry codes `666`
+Chat QQ Groups `363074875` with entry codes `666`
 
 - **Li Xiaolius Bilibili:** [https://space.bilibili.com/565938745](https://space.bilibili.com/565938745)
 - **DadaShuai666s Bilibili:** [https://space.bilibili.com/14205798](https://space.bilibili.com/14205798)
@@ -33,10 +37,11 @@ For reference, you can check out my previous article: [https://www.bilibili.com/
 
 ### Required Packages
 
-Download the following packages:
+Download the following packages and file:
 
-- `pve-qemu-kvm_9.xxx_amd64.deb` (Replace `xxx` with the specific version you downloaded)
+- `pve-qemu-kvm_10.xxx_amd64.deb` (Replace `xxx` with the specific version you downloaded)
 - `pve-edk2-firmware-ovmf_xxx.deb` you can also download from https://github.com/lixiaoliu666/pve-anti-detection-edk2-firmware-ovmf
+- `ssdt.aml` ssdt.aml==ssdt.dat you can edit ssdt.aml with https://github.com/ic005k/Xiasl
 
 Upload them to `/root` using **WinSCP**.
 
@@ -51,10 +56,10 @@ If you need advanced kernel compilation, refer to my article on compiling and lo
 
 ### Install Anti-Detection Packages
 
-For version **9.x**, install with:
+For version **10.x**, install with:
 
 ```bash
-dpkg -i pve-qemu-kvm_9.xxx_amd64.deb
+dpkg -i pve-qemu-kvm_10.xxx_amd64.deb
 dpkg -i pve-edk2-firmware-ovmf_xxx.deb
 ```
 
@@ -63,21 +68,31 @@ If your QEMU version is outdated, update your system and install the latest vers
 ```bash
 apt update
 apt install pve-qemu-kvm
-dpkg -i pve-qemu-kvm_9.xxx_amd64.deb
+dpkg -i pve-qemu-kvm_10.xxx_amd64.deb
 dpkg -i pve-edk2-firmware-ovmf_xxx.deb
 ```
 
-### Reboot After Installation
+### don't need Reboot After Installation
 
 ```bash
-reboot
+
 ```
 
 ### Restore Official Packages (If Needed)
 
 ```bash
 apt reinstall pve-qemu-kvm
+```
+or
+```bash
+apt reinstall pve-qemu-kvm=10.0.2-4
+```
+```bash
 apt reinstall pve-edk2-firmware-ovmf
+```
+or
+```bash
+apt reinstall pve-edk2-firmware-ovmf=4.2025.02-4
 ```
 
 ## 3. Creating a Virtual Machine
@@ -85,7 +100,7 @@ apt reinstall pve-edk2-firmware-ovmf
 ### Recommended Configuration
 
 - **BIOS:** OVMF + Q35 (Recommended) or OVMF + i440fx
-- **Storage:** SATA (at least 128GB; avoid SCSI and Virtio devices)
+- **Storage:** SATA (at least 128GB; avoid Virtio devices such as SCSI、virtioNET、virtioBlock、virtio-GPU..)
 - **CD Drive:** IDE or SATA
 - **Graphics:** Standard initially, then pass through dedicated GPU
 - **CPU:** `host` (1 socket, multiple cores)
@@ -95,7 +110,7 @@ apt reinstall pve-edk2-firmware-ovmf
 ### VM Configuration Example (`/etc/pve/qemu-server/100.conf`)
 
 ```ini
-args: -cpu host,hypervisor=off,vmware-cpuid-freq=false,enforce=false,host-phys-bits=true -smbios type=0 -smbios type=9 -smbios type=8 -smbios type=8
+args: -acpitable file=/root/ssdt.aml -acpitable file=/root/ssdt-ec.aml -acpitable file=/root/hpet.aml -cpu host,host-cache-info=on,hypervisor=off,vmware-cpuid-freq=false,enforce=false,host-phys-bits=true -smbios type=0,vendor="American Megatrends International LLC.",version=H3.7G,date='02/21/2023',release=3.7 -smbios type=1,manufacturer="Maxsun",product="MS-Terminator B760M",version="VER:H3.7G(2022/11/29)",serial="Default string",sku="Default string",family="Default string" -smbios type=2,manufacturer="Maxsun",product="MS-Terminator B760M",version="VER:H3.7G(2022/11/29)",serial="Default string",asset="Default string",location="Default string" -smbios type=3,manufacturer="Default string",version="Default string",serial="Default string",asset="Default string",sku="Default string" -smbios type=17,serial=DF1EC466,asset="9876543210" -smbios type=4,manufacturer="Intel(R) Corporation",version="12th Gen Intel(R) 0000" -smbios type=9 -smbios type=8 -smbios type=8
 balloon: 0
 bios: ovmf
 boot: order=ide2;sata0;net0
@@ -110,7 +125,7 @@ name: win10
 net0: e1000=D8:FC:93:56:1D:C7,bridge=vmbr0,firewall=1
 numa: 0
 ostype: l26
-sata0: local:102/vm-102-disk-1.raw,size=128G,ssd=1
+sata0: local:102/vm-102-disk-1.raw,size=128G,ssd=1,serial=0123456789ABCDEF0123
 scsihw: virtio-scsi-single
 smbios1: uuid=505429c8-a350-41e9-9154-3851c095254e
 sockets: 1
@@ -124,7 +139,7 @@ vmgenid: 2271babc-cafc-4c68-be8b-2bb3157c9924
 For **QEMU 7 & 8**, use the following `args`:
 
 ```ini
-args: -cpu host,hypervisor=off,vmware-cpuid-freq=false,enforce=false,host-phys-bits=true -smbios type=0,vendor="American Megatrends International LLC.",version=H3.7G,date='02/21/2023',release=3.7 -smbios type=1,manufacturer="Maxsun",product="MS-Terminator B760M",version="VER:H3.7G(2022/11/29)",serial="Default string",sku="Default string",family="Default string" -smbios type=17,loc_pfx="Controller0-ChannelA-DIMM",manufacturer="KINGSTON",speed=3200,serial=DF1EC466,part="SED3200U1888S",bank="BANK 0",asset="9876543210" -smbios type=4,sock_pfx="LGA1700",manufacturer="Intel(R) Corporation",version="12th Gen Intel(R) Core(TM) i7-12700",max-speed=4900,current-speed=3800,serial="To Be Filled By O.E.M.",asset="To Be Filled By O.E.M.",part="To Be Filled By O.E.M."
+args: -acpitable file=/root/ssdt.aml -cpu host,host-cache-info=on,hypervisor=off,vmware-cpuid-freq=false,enforce=false,host-phys-bits=true -smbios type=0,vendor="American Megatrends International LLC.",version=H3.7G,date='02/21/2023',release=3.7 -smbios type=1,manufacturer="Maxsun",product="MS-Terminator B760M",version="VER:H3.7G(2022/11/29)",serial="Default string",sku="Default string",family="Default string" -smbios type=17,loc_pfx="Controller0-ChannelA-DIMM",manufacturer="KINGSTON",speed=3200,serial=DF1EC466,part="SED3200U1888S",bank="BANK 0",asset="9876543210" -smbios type=4,sock_pfx="LGA1700",manufacturer="Intel(R) Corporation",version="12th Gen Intel(R) Core(TM) i7-12700",max-speed=4900,current-speed=3800,serial="To Be Filled By O.E.M.",asset="To Be Filled By O.E.M.",part="To Be Filled By O.E.M."
 ```
 
 ## 4. Additional Notes

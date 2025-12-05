@@ -21,7 +21,7 @@
 #include "qemu/config-file.h"
 #include "qemu/module.h"
 #include "qemu/option.h"
-#include "sysemu/sysemu.h"
+#include "system/system.h"
 #include "qemu/uuid.h"
 #include "hw/firmware/smbios.h"
 #include "hw/loader.h"
@@ -687,16 +687,16 @@ static void smbios_build_type_37_table(void)
     SMBIOS_BUILD_TABLE_POST;
 }
 
-/* SMBIOS type 29 ElectricalCurrentProbe （这个没有写完） 李晓流 dds666 added*/
+/* SMBIOS type 29 ElectricalCurrentProbe （电流探头 这个没有写完） 李晓流 dds666 added*/
 //https://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.8.0WIP50.pdf 请使用这个规范文件System Management BIOS (SMBIOS) Reference Specification设置type 29 内部参数信息
 static void smbios_build_type_29_table(void)
 {
     SMBIOS_BUILD_TABLE_PRE(29, T29_BASE, true); /* required */
-	SMBIOS_TABLE_SET_STR(29, description,"lixiaoliu Electrical");
+	SMBIOS_TABLE_SET_STR(29, description,"Electrical");
     SMBIOS_BUILD_TABLE_POST;
 }
 
-/* SMBIOS type 39 SystemPowerSupply （这个没有写完） 李晓流 dds666 added*/
+/* SMBIOS type 39 SystemPowerSupply （供电 这个没有写完） 李晓流 dds666 added*/
 //https://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.8.0WIP50.pdf 请使用这个规范文件System Management BIOS (SMBIOS) Reference Specification设置type 39 内部参数信息
 static void smbios_build_type_39_table(void)
 {
@@ -705,13 +705,27 @@ static void smbios_build_type_39_table(void)
     SMBIOS_BUILD_TABLE_POST;
 }
 
-/* SMBIOS type 22 PortableBattery （这个没有写完） 李晓流 dds666 added*/
+/* SMBIOS type 22 PortableBattery （电池 这个基本写完） 李晓流 dds666 added*/
 //https://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.8.0WIP50.pdf 请使用这个规范文件System Management BIOS (SMBIOS) Reference Specification设置type 22 内部参数信息
 static void smbios_build_type_22_table(void)
 {
     SMBIOS_BUILD_TABLE_PRE(22, T22_BASE, true); /* required */
-	SMBIOS_TABLE_SET_STR(22, device_name,"lixiaoliu Battery");
+	SMBIOS_TABLE_SET_STR(22, location,"in the back");
+	SMBIOS_TABLE_SET_STR(22, manufacturer,"lixiaoliu");
+	SMBIOS_TABLE_SET_STR(22, manufacturer_date,"02/02/2025");
+	SMBIOS_TABLE_SET_STR(22, serial_number,"lixiaoliu666");
+	SMBIOS_TABLE_SET_STR(22, device_name,"BAT0");
+	t->device_chemistry=0x6;//lion
+	t->design_capacity=cpu_to_le16(0xECF4);// 60660(0xECF4) x 1(0x1)= 60660mWh
+	t->design_voltage=cpu_to_le16(0x2EE0); //12 v 
+	t->sbds_version_number=0x0; 
+	t->maximum_error_in_battery_data=0x1;
+	t->design_capacity_multiplier=0x1;//
+	t->oem_specific=cpu_to_le32(0x60666);
     SMBIOS_BUILD_TABLE_POST;
+	//uint16_t sbds_serial_number;
+	//uint16_t sbds_manufacture_date;
+	//uint8_t sbds_device_chemistry;
 }
 #define T16_BASE 0x1000
 #define T17_BASE 0x1100
@@ -724,18 +738,20 @@ static void smbios_build_type_0_table(void)
 {
     SMBIOS_BUILD_TABLE_PRE(0, T0_BASE, false); /* optional, leave up to BIOS */
 
-    SMBIOS_TABLE_SET_STR(0, vendor_str, "American Megatrends International LLC.");  //李晓流 dds666 modify
-    SMBIOS_TABLE_SET_STR(0, bios_version_str, "H3.7G");//李晓流 dds666 modify
+    SMBIOS_TABLE_SET_STR(0, vendor_str, smbios_type0.vendor);
+    SMBIOS_TABLE_SET_STR(0, bios_version_str, smbios_type0.version);
 
     t->bios_starting_address_segment = cpu_to_le16(0xE800); /* from SeaBIOS */
 
-    SMBIOS_TABLE_SET_STR(0, bios_release_date_str, "02/21/2023");//李晓流 dds666 modify
+    SMBIOS_TABLE_SET_STR(0, bios_release_date_str, smbios_type0.date);
 
     t->bios_rom_size = 0; /* hardcoded in SeaBIOS with FIXME comment */
 
     t->bios_characteristics = cpu_to_le64(0x08); /* Not supported */
+
     t->bios_characteristics_extension_bytes[0] = 0xEF; //李晓流 dds666 modify
     t->bios_characteristics_extension_bytes[1] = 0x0F; /* //李晓流 dds666 modify 只要不是0x10 也就是16就不会显示VirtualMachineSupported */
+
     if (smbios_type0.uefi) {
         t->bios_characteristics_extension_bytes[1] |= 0x08; /* |= UEFI */
     }
@@ -744,8 +760,8 @@ static void smbios_build_type_0_table(void)
         t->system_bios_major_release = smbios_type0.major;
         t->system_bios_minor_release = smbios_type0.minor;
     } else {
-        t->system_bios_major_release = 3; //李晓流 dds666 modify bios版本号
-        t->system_bios_minor_release = 7; //李晓流 dds666 modify bios版本号
+        t->system_bios_major_release = 0;
+        t->system_bios_minor_release = 0;
     }
 
     /* hardcoded in SeaBIOS */
@@ -769,34 +785,31 @@ static void smbios_encode_uuid(struct smbios_uuid *uuid, QemuUUID *in)
 static void smbios_build_type_1_table(void)
 {
     SMBIOS_BUILD_TABLE_PRE(1, T1_BASE, true); /* required */
-
-    SMBIOS_TABLE_SET_STR(1, manufacturer_str, "Maxsun"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(1, product_name_str, "MS-Terminator B760M"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(1, version_str, "VER:H3.7G(2022/11/29)"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(1, serial_number_str, "Default string"); //李晓流 dds666 modify 
+    SMBIOS_TABLE_SET_STR(1, manufacturer_str, smbios_type1.manufacturer);
+    SMBIOS_TABLE_SET_STR(1, product_name_str, smbios_type1.product);
+    SMBIOS_TABLE_SET_STR(1, version_str, smbios_type1.version);
+    SMBIOS_TABLE_SET_STR(1, serial_number_str, smbios_type1.serial);
     if (qemu_uuid_set) {
         smbios_encode_uuid(&t->uuid, &qemu_uuid);
     } else {
         memset(&t->uuid, 0, 16);
     }
     t->wake_up_type = 0x06; /* power switch */
-    SMBIOS_TABLE_SET_STR(1, sku_number_str, "Default string"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(1, family_str, "Default string"); //李晓流 dds666 modify 
-
+    SMBIOS_TABLE_SET_STR(1, sku_number_str, smbios_type1.sku);
+    SMBIOS_TABLE_SET_STR(1, family_str, smbios_type1.family);
     SMBIOS_BUILD_TABLE_POST;
 }
 
 static void smbios_build_type_2_table(void)
 {
     SMBIOS_BUILD_TABLE_PRE(2, T2_BASE, true); /* optional */
-
-    SMBIOS_TABLE_SET_STR(2, manufacturer_str, "Maxsun"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(2, product_str, "MS-Terminator B760M"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(2, version_str, "VER:H3.7G(2022/11/29)"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(2, serial_number_str, "Default string"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(2, asset_tag_number_str,"Default string"); //李晓流 dds666 modify 
+    SMBIOS_TABLE_SET_STR(2, manufacturer_str, type2.manufacturer);
+    SMBIOS_TABLE_SET_STR(2, product_str, type2.product);
+    SMBIOS_TABLE_SET_STR(2, version_str, type2.version);
+    SMBIOS_TABLE_SET_STR(2, serial_number_str, type2.serial);
+    SMBIOS_TABLE_SET_STR(2, asset_tag_number_str, type2.asset);
     t->feature_flags = 0x01; /* Motherboard */
-    SMBIOS_TABLE_SET_STR(2, location_str,"Default string"); //李晓流 dds666 modify 
+    SMBIOS_TABLE_SET_STR(2, location_str, type2.location);
     t->chassis_handle = cpu_to_le16(0x300); /* Type 3 (System enclosure) */
     t->board_type = 0x0A; /* Motherboard */
     t->contained_element_count = 0;
@@ -808,21 +821,21 @@ static void smbios_build_type_3_table(void)
 {
     SMBIOS_BUILD_TABLE_PRE(3, T3_BASE, true); /* required */
 
-    SMBIOS_TABLE_SET_STR(3, manufacturer_str, "Default string"); //李晓流 dds666 modify 
-    t->type = 0x01; /* Other */
-    SMBIOS_TABLE_SET_STR(3, version_str, "Default string"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(3, serial_number_str, "Default string"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(3, asset_tag_number_str, "Default string"); //李晓流 dds666 modify 
+    SMBIOS_TABLE_SET_STR(3, manufacturer_str, type3.manufacturer);
+    t->type = 0x03; /* Desktop */
+    SMBIOS_TABLE_SET_STR(3, version_str, type3.version);
+    SMBIOS_TABLE_SET_STR(3, serial_number_str, type3.serial);
+    SMBIOS_TABLE_SET_STR(3, asset_tag_number_str, type3.asset);
     t->boot_up_state = 0x03; /* Safe */
     t->power_supply_state = 0x03; /* Safe */
     t->thermal_state = 0x03; /* Safe */
-    t->security_status = 0x03; /* Unknown */ //李晓流 dds666 modify 0x03代表None
+     t->security_status = 0x02; /* Unknown */
     t->oem_defined = cpu_to_le32(0);
     t->height = 0;
     t->number_of_power_cords = 0;
     t->contained_element_count = 0;
     t->contained_element_record_length = 0;
-    SMBIOS_TABLE_SET_STR(3, sku_number_str, "Default string"); //李晓流 dds666 modify 
+    SMBIOS_TABLE_SET_STR(3, sku_number_str, type3.sku);
 
     SMBIOS_BUILD_TABLE_POST;
 }
@@ -842,12 +855,11 @@ static void smbios_build_type_4_table(MachineState *ms, unsigned instance,
 
     SMBIOS_BUILD_TABLE_PRE_SIZE(4, T4_BASE + instance,
                                 true, tbl_len); /* required */
-
     snprintf(sock_str, sizeof(sock_str), "%s%2x", type4.sock_pfx, instance);
     SMBIOS_TABLE_SET_STR(4, socket_designation_str, "LGA1700"); //李晓流 dds666 modify 直接改成12代的LGA1700 接口
     t->processor_type = 0x03; /* CPU */
-    t->processor_family = 0xC6; /* use Processor Family 2 field */ //李晓流 dds666 modify 0xC6代表 Intel® Core™ i7 processor
-    SMBIOS_TABLE_SET_STR(4, processor_manufacturer_str, "Intel(R) Corporation"); //李晓流 dds666 modify 
+    t->processor_family = 0x01; /* Other use Processor Family 2 field */ //李晓流 dds666 modify 0xC6代表 Intel® Core™ i7 processor
+    SMBIOS_TABLE_SET_STR(4, processor_manufacturer_str, type4.manufacturer);
     if (type4.processor_id == 0) {
         t->processor_id[0] = cpu_to_le32(smbios_cpuid_version);
         t->processor_id[1] = cpu_to_le32(smbios_cpuid_features);
@@ -855,16 +867,16 @@ static void smbios_build_type_4_table(MachineState *ms, unsigned instance,
         t->processor_id[0] = cpu_to_le32((uint32_t)type4.processor_id);
         t->processor_id[1] = cpu_to_le32(type4.processor_id >> 32);
     }
-    SMBIOS_TABLE_SET_STR(4, processor_version_str, "12th Gen Intel(R) Core(TM) i7"); //李晓流 dds666 modify 
+    SMBIOS_TABLE_SET_STR(4, processor_version_str, type4.version);
     t->voltage = 0x8B;
-    t->external_clock = cpu_to_le16(100); /* Unknown */ //李晓流 dds666 modify 外频100mhz
-    t->max_speed = cpu_to_le16(4900); //李晓流 dds666 modify 最大频率4.9gzh
-    t->current_speed = cpu_to_le16(4455); //李晓流 dds666 modify 当前频率4455mhz
+    t->external_clock = cpu_to_le16(0x64); /* 100mhz */
+    t->max_speed = cpu_to_le16(6500); //6.5ghz
+    t->current_speed = cpu_to_le16(type4.current_speed);
     t->status = 0x41; /* Socket populated, CPU enabled */
     t->processor_upgrade = 0x01; /* Other */
-    t->l1_cache_handle = cpu_to_le16(0x0051); /* N/A */ //李晓流 dds666 modify L1缓存抄写物理机
-    t->l2_cache_handle = cpu_to_le16(0x0052); /* N/A */ //李晓流 dds666 modify L2缓存抄写物理机
-    t->l3_cache_handle = cpu_to_le16(0x0053); /* N/A */ //李晓流 dds666 modify L3缓存抄写物理机
+    t->l1_cache_handle = cpu_to_le16(0xFF); /* N/A */
+    t->l2_cache_handle = cpu_to_le16(0xFF); /* N/A */
+    t->l3_cache_handle = cpu_to_le16(0xFF); /* N/A */
     SMBIOS_TABLE_SET_STR(4, serial_number_str, "To Be Filled By O.E.M."); //李晓流 dds666
     SMBIOS_TABLE_SET_STR(4, asset_tag_number_str, "To Be Filled By O.E.M."); //李晓流 dds666
     SMBIOS_TABLE_SET_STR(4, part_number_str, "To Be Filled By O.E.M."); //李晓流 dds666
@@ -877,8 +889,8 @@ static void smbios_build_type_4_table(MachineState *ms, unsigned instance,
 
     t->thread_count = (threads_per_socket > 255) ? 0xFF : threads_per_socket;
 
-    t->processor_characteristics = cpu_to_le16(0x04); /* Unknown */ //李晓流 dds666 modify 0x4 计算得到代表64-bit Capable
-    t->processor_family2 = cpu_to_le16(0xC6); //李晓流 dds666 modify 和t->processor_family保持一致不一致都可以
+    t->processor_characteristics = cpu_to_le16(0xFC); /* Unknown */ //李晓流 dds666 modify 0x4 计算得到代表64-bit Capable
+    t->processor_family2 = cpu_to_le16(0x01); //Other 李晓流 dds666 modify 和t->processor_family保持一致不一致都可以
 
     if (tbl_len == SMBIOS_TYPE_4_LEN_V30) {
         t->core_count2 = t->core_enabled2 = cpu_to_le16(cores_per_socket);
@@ -1044,23 +1056,23 @@ static void smbios_build_type_17_table(unsigned instance, uint64_t size)
         t->size = cpu_to_le16(MAX_T17_STD_SZ);
         t->extended_size = cpu_to_le32(size_mb);
     }
-    t->form_factor = 0x09; /* DIMM */
+    t->form_factor = 0x0D; /* SODIMM */
     t->device_set = 0; /* Not in a set */
     snprintf(loc_str, sizeof(loc_str), "%s %d", type17.loc_pfx, instance);
-    SMBIOS_TABLE_SET_STR(17, device_locator_str, "Controller0-ChannelA-DIMM0");   //李晓流 dds666 modify 内存设备位置
+    SMBIOS_TABLE_SET_STR(17, device_locator_str, "ChannelA-DIMM0");   //李晓流 dds666 modify 内存设备位置
     SMBIOS_TABLE_SET_STR(17, bank_locator_str, "BANK 0");  //李晓流 dds666 modify 内存插槽位置
-    t->memory_type = 0x1A; /* DDR4 */  //李晓流 dds666 modify ddr4类型
+     t->memory_type = 0x18; /* DDR3 */  //李晓流 dds666 modify ddr3类型
     t->type_detail = cpu_to_le16(0x80); /* test 0x80*/ //李晓流 dds666 modify 0x80代表 Synchronous
-    t->speed = cpu_to_le16(3200); //李晓流 dds666 modify 3200mhz
-    SMBIOS_TABLE_SET_STR(17, manufacturer_str, "KINGSTON"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(17, serial_number_str, "DF1EC466"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(17, asset_tag_number_str, "9876543210"); //李晓流 dds666 modify 
-    SMBIOS_TABLE_SET_STR(17, part_number_str, "SED3200U1888S"); //李晓流 dds666 modify 
-    t->attributes = 1; /* test 1 */ //李晓流 dds666 modify 1代表 记不得了，你要测一下
+    t->speed = cpu_to_le16(1600); //李晓流 dds666 modify 1600mhz
+    SMBIOS_TABLE_SET_STR(17, manufacturer_str, "Kingston"); //李晓流 dds666 modify
+    SMBIOS_TABLE_SET_STR(17, serial_number_str, type17.serial);//李晓流 dds666 modify
+    SMBIOS_TABLE_SET_STR(17, asset_tag_number_str, type17.asset);//李晓流 dds666 modify
+    SMBIOS_TABLE_SET_STR(17, part_number_str, "KHX1600C9S3L/32G");//李晓流 dds666 modify
+    t->attributes = 0x02; /* test 1 */ //李晓流 dds666 modify 1代表 记不得了，你要测一下
     t->configured_clock_speed = t->speed; /* reuse value for max speed */
-    t->minimum_voltage = cpu_to_le16(1200); /* Unknown */ //李晓流 dds666 modify 1.2v
-    t->maximum_voltage = cpu_to_le16(1350); /* Unknown */ //李晓流 dds666 modify  1.35v
-    t->configured_voltage = cpu_to_le16(1200); /* Unknown */ //李晓流 dds666 modify 1.2v
+    t->minimum_voltage = cpu_to_le16(1350); /* Unknown */ //李晓流 dds666 modify 1.35v
+    t->maximum_voltage = cpu_to_le16(1500); /* Unknown */ //李晓流 dds666 modify  1.5v
+    t->configured_voltage = cpu_to_le16(1350); /* Unknown */ //李晓流 dds666 modify 1.35v
 
     SMBIOS_BUILD_TABLE_POST;
 }
@@ -1179,20 +1191,19 @@ void smbios_set_defaults(const char *manufacturer, const char *product,
 {
     smbios_have_defaults = true;
 
-    SMBIOS_SET_DEFAULT(smbios_type1.manufacturer, "Maxsun"); //李晓流 dds666 modify
-    SMBIOS_SET_DEFAULT(smbios_type1.product, "MS-Terminator B760M"); //李晓流 dds666 modify
-    SMBIOS_SET_DEFAULT(smbios_type1.version, "VER:H3.7G(2022/11/29)"); //李晓流 dds666 modify
-    SMBIOS_SET_DEFAULT(type2.manufacturer, "Maxsun"); //李晓流 dds666 modify
-    SMBIOS_SET_DEFAULT(type2.product, "MS-Terminator B760M"); //李晓流 dds666 modify
-    SMBIOS_SET_DEFAULT(type2.version, "VER:H3.7G(2022/11/29)"); //李晓流 dds666 modify
-    SMBIOS_SET_DEFAULT(type3.manufacturer, "Default string"); //李晓流 dds666 modify
-    SMBIOS_SET_DEFAULT(type3.version, "Default string"); //李晓流 dds666 modify
+    SMBIOS_SET_DEFAULT(smbios_type1.manufacturer, manufacturer);
+    SMBIOS_SET_DEFAULT(smbios_type1.product, product);
+    SMBIOS_SET_DEFAULT(smbios_type1.version, version);
+    SMBIOS_SET_DEFAULT(type2.manufacturer, manufacturer);
+    SMBIOS_SET_DEFAULT(type2.product, product);
+    SMBIOS_SET_DEFAULT(type2.version, version);
+    SMBIOS_SET_DEFAULT(type3.manufacturer, manufacturer);
+    SMBIOS_SET_DEFAULT(type3.version, version);
     SMBIOS_SET_DEFAULT(type4.sock_pfx, "CPU");
-    SMBIOS_SET_DEFAULT(type4.manufacturer, "Intel(R) Corporation"); //李晓流 dds666 modify
-    SMBIOS_SET_DEFAULT(type4.version, "12th Gen Intel(R) Core(TM) i7-12700"); //李晓流 dds666 modify
+    SMBIOS_SET_DEFAULT(type4.manufacturer, manufacturer);
+    SMBIOS_SET_DEFAULT(type4.version, version);
     SMBIOS_SET_DEFAULT(type17.loc_pfx, "DIMM");
-    SMBIOS_SET_DEFAULT(type17.manufacturer, "KINGSTON"); //李晓流 dds666 modify
-	
+    SMBIOS_SET_DEFAULT(type17.manufacturer, manufacturer);
 }
 
 static void smbios_entry_point_setup(SmbiosEntryPointType ep_type)
@@ -1298,13 +1309,9 @@ static bool smbios_get_tables_ep(MachineState *ms,
 	unsigned cores_per_socket = machine_topo_get_cores_per_socket(ms);
 	smbios_build_type_7_table(0,"L1 Cache",0x180,cores_per_socket*0x20,0x4,0x4,0x7); //李晓流 dds666 added 设置1级数据缓存，每个核心32kb
 	smbios_build_type_7_table(1,"L1 Cache",0x180,cores_per_socket*0x20,0x4,0x3,0x7); //李晓流 dds666 added 设置1级指令缓存，每个核心32kb
-	smbios_build_type_7_table(2,"L2 Cache",0x181,cores_per_socket*0x800,0x5,0x4,0x8); //李晓流 dds666 added 设置2级数据缓存，每个核心2m
-	smbios_build_type_7_table(3,"L2 Cache",0x181,cores_per_socket*0x800,0x5,0x3,0x8); //李晓流 dds666 added 设置2级指令缓存，每个核心2m
-	smbios_build_type_7_table(4,"L3 Cache",0x182,0x2000,0x6,0x5,0x8); //李晓流 dds666 added 设置3级Unified缓存，8M
-	smbios_build_type_7_table(5,"L3 Cache",0x182,0x2000,0x6,0x5,0x8); //李晓流 dds666 added 设置3级Unified缓存，8M
-	smbios_build_type_7_table(6,"lixiaoliu L4 Cache",0x183,0x4000,0x6,0x5,0x1); //李晓流 dds666 added 设置4级Unified缓存，16M
-
-
+	smbios_build_type_7_table(2,"L2 Cache",0x181,cores_per_socket*0x200,0x5,0x5,0x8); //李晓流 dds666 added 设置2级Unified缓存每个核心512kb
+	smbios_build_type_7_table(3,"L3 Cache",0x182,0x4000,0x6,0x5,0x8); //李晓流 dds666 added 设置3级Unified缓存，16M
+	
     smbios_build_type_8_table();
     smbios_build_type_9_table(errp);
     smbios_build_type_11_table();
@@ -1349,43 +1356,27 @@ static bool smbios_get_tables_ep(MachineState *ms,
 	//(unsigned instance,const char *description,uint8_t location_and_status)t->location_and_status=0x6A; 
 	//https://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.8.0WIP50.pdf 请使用这个规范文件System Management BIOS (SMBIOS) Reference Specification设置type 26 内部参数信息
 	smbios_build_type_26_table(0,"LM78A",0x6A);//李晓流 dds666 added
-	smbios_build_type_26_table(1,"LM78A",0x67);//李晓流 dds666 added
-	smbios_build_type_26_table(2,"dds666",0x63);//李晓流 dds666 added
-	smbios_build_type_26_table(3,"dds666",0x64);//李晓流 dds666 added
-	smbios_build_type_26_table(4,"lixiaoliu",0x63);//李晓流 dds666 added
-	smbios_build_type_26_table(5,"lixiaoliu",0x64);//李晓流 dds666 added
-	smbios_build_type_26_table(6,"lixiaoliu",0x6A);//李晓流 dds666 added
-	smbios_build_type_26_table(7,"lixiaoliu",0x67);//李晓流 dds666 added
+	smbios_build_type_26_table(1,"LM78A-1",0x67);//李晓流 dds666 added
 
 	//李晓流 dds666 added CoolingDevice 
 	//(unsigned instance,const char *description,uint8_t device_type_and_status) t->device_type_and_status = 0x67; //Power Supply Fan |  Ok   0x67=b01100111
 	//https://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.8.0WIP50.pdf 请使用这个规范文件System Management BIOS (SMBIOS) Reference Specification设置type 27 内部参数信息
 	smbios_build_type_27_table(0,"CPU FAN",0x67);//李晓流 dds666 added
-	smbios_build_type_27_table(1,"dds666",0x65);//李晓流 dds666 added
-	smbios_build_type_27_table(2,"dds666",0x63);//李晓流 dds666 added
-	smbios_build_type_27_table(3,"lixiaoliu",0x65);//李晓流 dds666 added
-	smbios_build_type_27_table(4,"lixiaoliu",0x63);//李晓流 dds666 added
-	smbios_build_type_27_table(5,"lixiaoliu",0x67);//李晓流 dds666 added
 
 	//李晓流 dds666 added TemperatureProbe 
 	//unsigned instance,const char *description,uint8_t location_and_status) t->location_and_status=0x6A;
 	//https://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.8.0WIP50.pdf 请使用这个规范文件System Management BIOS (SMBIOS) Reference Specification设置type 28 内部参数信息
-	smbios_build_type_28_table(0,"LM78A",0x63);//李晓流 dds666 added
-	smbios_build_type_28_table(1,"LM78A",0x6A);//李晓流 dds666 added
-	smbios_build_type_28_table(2,"dds666",0x67);//李晓流 dds666 added
-	smbios_build_type_28_table(3,"lixiaoliu",0x67);//李晓流 dds666 added
-	smbios_build_type_28_table(4,"lixiaoliu",0x69);//李晓流 dds666 added
-	smbios_build_type_28_table(5,"lixiaoliu",0x63);//李晓流 dds666 added
-	smbios_build_type_28_table(6,"lixiaoliu",0x6A);//李晓流 dds666 added
+	smbios_build_type_28_table(0,"LM78A",0x63);//李晓流 dds666 added 0x3=cpu
+	smbios_build_type_28_table(1,"LM78A-1",0x67);//李晓流 dds666 added 0x7=motherboard
 	smbios_build_type_29_table();//李晓流 dds666 added ElectricalCurrentProbe
 
 
 
 
     smbios_build_type_32_table();
-	smbios_build_type_37_table();//李晓流 dds666 added MemoryChannel
+    smbios_build_type_37_table();//李晓流 dds666 added MemoryChannel
     smbios_build_type_38_table();
-	smbios_build_type_39_table();//李晓流 dds666 added SystemPowerSupply
+    smbios_build_type_39_table();//李晓流 dds666 added SystemPowerSupply
     smbios_build_type_41_table(errp);
     smbios_build_type_127_table();
 
@@ -1792,4 +1783,3 @@ void smbios_entry_add(QemuOpts *opts, Error **errp)
 
     error_setg(errp, "Must specify type= or file=");
 }
-
