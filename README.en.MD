@@ -2,17 +2,9 @@ Language [<a href="README.md">中文</a>] | [<a href="README.en.MD">English</a>]
 
 PVE Debain Ubuntu ArchLinux virtual machine emulates a physical machine to avoid(or anti) detection
 
-# Li Xiaoliu & DadaShuai666 Project
-
-**Authors:** Li Xiaoliu & DadaShuai666
-
-
-- **Li Xiaolius Bilibili:** [https://space.bilibili.com/565938745](https://space.bilibili.com/565938745)
-- **DadaShuai666s Bilibili:** [https://space.bilibili.com/14205798](https://space.bilibili.com/14205798)
+# Li Xiaoliu666 Project
 
 ## Overview
-
-I initially wanted to add the "Li Xiaoliu & DadaShuai666 Project LOGO.jpg" icon to the PVE virtual machine boot screen. Since PVEs KVM and OVMF are separate packages, compiling the OVMF package is necessary to achieve this. Now, I have successfully implemented it through the OVMF package.
 
 For reference, you can check out my previous article: [https://www.bilibili.com/read/cv26245305](https://www.bilibili.com/read/cv26245305)
 

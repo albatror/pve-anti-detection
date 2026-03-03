@@ -2,20 +2,15 @@ Language [<a href="README.md">中文</a>] | [<a href="README.en.MD">English</a>]
 
 PVE Debain Ubuntu ArchLinux virtual machine emulates a physical machine to avoid(or anti) detection（pve Debian Ubuntu ArchLinux虚拟机模拟真实机器防检测）
 
-李晓流 & 大大帅666 作品
+lixiaoliu666 作品
 
-
-李晓流 b站地址：https://space.bilibili.com/565938745
-
-大大帅666 b站地址 https://space.bilibili.com/14205798
+20060228更新：发布10.1.2-7_amd64_Strong can dynamically display CPU information such as temperature, MHz, voltage, and power consumption in a Windows VM.Use cpu-z,hwinfo,hwmoniter.cpu传感器穿透到虚拟机显示。
 
 20250906更新：已取消主板型号随机（可自己定制），取消内存序列号随机（可自己定制），ide sata硬盘自己设置serial=20位序列号进行定制固定（不固定内部默认还是随机）。n卡独显直通43错误请二者选其一：ssdt.aml（不带电池）和ssdt-battery.aml（带个虚拟电池），台式机u选无电池，笔记本u选有电池，加载ssdt后43错误解决了就行。
 
 20250805更新：增加acpi添加ssdt功能，ssdt-battery.aml里有个虚拟电池（可显示）ssdt.aml无虚拟电池、虚拟cpu和主板温度（可显示）、虚拟风扇（无法显示），你可以使用https://github.com/ic005k/Xiasl 直接对ssdt.aml（ssdt.aml==ssdt.dat 后缀名区别而已）进行自我编辑增加修改功能
 
 20250725更新：实现了无序三件套效果（只需要重启一下虚拟机就自动变化）：内存序列号随机，ide和sata硬盘序列号和固件号随机，主板型号随机
-
-本想把 李晓流 & 大大帅666 作品 LOGO.jpg 这个图标搞进pve虚拟机启动画面的，pve的kvm和ovmf分别是两个包不是同一个包，要编译ovmf包才能实现开机画面，现在通过ovmf包实现了。
 
 可以参考以前我发布的这个文章：https://www.bilibili.com/read/cv26245305 该文章抛砖引玉而已
 
@@ -149,6 +144,12 @@ https://www.bilibili.com/read/readlist/rl758108 pve虚拟机模拟真实机器�
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=lixiaoliu666/pve-anti-detection&type=Date)](https://www.star-history.com/#lixiaoliu666/pve-anti-detection&Date)
+
+
+
+
+
+
 
 
 
